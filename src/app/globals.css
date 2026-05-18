@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0b0b10;
+  color: #e7e7ee;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(29, 185, 84, 0.35);
+  color: #fff;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-spotify-green text-black hover:scale-[1.02] hover:bg-[#1ed760] shadow-glow;
+  }
+  .btn-ghost {
+    @apply btn bg-white/5 text-white hover:bg-white/10 border border-white/10;
+  }
+  .btn-danger {
+    @apply btn bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30;
+  }
+  .card {
+    @apply bg-card-gradient border border-white/5 rounded-2xl p-5;
+  }
+  .input {
+    @apply w-full bg-surface-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-spotify-green/60 focus:ring-2 focus:ring-spotify-green/20 transition;
+  }
+  .label {
+    @apply block text-sm font-medium text-white/70 mb-1.5;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs bg-white/5 border border-white/10 text-white/70;
+  }
+}
