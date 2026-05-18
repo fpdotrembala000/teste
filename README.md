@@ -186,9 +186,38 @@ src/
 | `User not registered in the developer dashboard` | App em Development Mode | Adicione seu e-mail em **Users and Access** no Spotify Dashboard |
 | `ANTHROPIC_API_KEY não configurada` | `.env.local` ausente ou servidor não foi reiniciado | Reinicie `npm run dev` após editar `.env.local` |
 | `404 not_found_error model: ...` | O modelo configurado não está liberado para sua conta | Defina `ANTHROPIC_MODEL=claude-haiku-4-5` no `.env.local` (o app já tem fallback automático) |
+| `Forbidden` ao criar/adicionar musicas na playlist | App em Development Mode sem o seu e-mail em 'Users and Access', ou token sem scopes | Veja a secao **Resolvendo "Forbidden"** abaixo |
 | `Sessão expirada, faça login novamente` | Refresh token revogado/ausente | Saia e entre novamente em **Entrar com Spotify** |
 | Muitas músicas não encontradas | IA usou nomes traduzidos/aproximados | Clique em **Gerar outra versão** ou ajuste o prompt |
 | Erro 403 ao ler playlist por inspiração | Playlist privada de outro usuário | Use playlists públicas |
+
+---
+
+## Resolvendo "Forbidden" (403) ao criar a playlist
+
+O Spotify retorna 403 em duas situações comuns:
+
+### Causa 1 — Seu e-mail não está em "Users and Access"
+
+Apps recém-criados ficam em **Development Mode** e só permitem até 25 usuários explicitamente cadastrados.
+
+1. Acesse https://developer.spotify.com/dashboard
+2. Abra o app que você criou
+3. Vá em **Settings** → **User Management** (ou **Users and Access**)
+4. Clique em **Add new user**
+5. Preencha **Name** e **Email** com **o e-mail da conta Spotify que está usando o app**
+   - Importante: tem que ser exatamente o e-mail vinculado à sua conta Spotify
+6. Salve
+7. No app, faça **logout e login novamente**
+
+### Causa 2 — Token antigo, sem os scopes necessários
+
+Se você logou antes de uma atualização que adicionou novos scopes, o token salvo no cookie ainda não tem permissão pra criar playlists.
+
+1. Clique em **Sair** no menu lateral do app (ou abra `/api/auth/spotify/logout` no navegador)
+2. Clique em **Entrar com Spotify** novamente
+3. O Spotify vai mostrar a tela de consentimento — **autorize**
+4. Tente criar a playlist de novo
 
 ---
 

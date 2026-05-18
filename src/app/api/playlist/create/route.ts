@@ -83,15 +83,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const playlist = await createPlaylist({
-      userId: user.id,
-      name,
-      description,
-      isPublic,
-      token,
-    });
+    let playlist;
+    try {
+      playlist = await createPlaylist({
+        userId: user.id,
+        name,
+        description,
+        isPublic,
+        token,
+      });
+    } catch (e) {
+      if (e instanceof SpotifyApiError && e.status === 403) {
+        return NextResponse.json(
+          {
+            error:
+              "Forbidden ao criar a playlist. Causas mais comuns: (1) seu e-mail nao foi adicionado em 'Users and Access' no Spotify Developer Dashboard (apps em Development Mode aceitam ate 25 usuarios) ou (2) o token salvo nao tem as permissoes necessarias - faca logout e login novamente para reautorizar com os scopes corretos.",
+            stage: "create_playlist",
+            spotifyMessage: e.message,
+          },
+          { status: 403 }
+        );
+      }
+      throw e;
+    }
 
-    await addTracksToPlaylist(playlist.id, uris, token);
+    try {
+      await addTracksToPlaylist(playlist.id, uris, token);
+    } catch (e) {
+      if (e instanceof SpotifyApiError && e.status === 403) {
+        return NextResponse.json(
+          {
+            error:
+              "A playlist foi criada, mas o Spotify recusou (403) ao adicionar as musicas. Verifique se seu e-mail esta em 'Users and Access' no Developer Dashboard e/ou faca logout e login novamente para reautorizar.",
+            stage: "add_tracks",
+            playlistId: playlist.id,
+            playlistUrl: playlist.external_urls.spotify,
+            spotifyMessage: e.message,
+          },
+          { status: 403 }
+        );
+      }
+      throw e;
+    }
 
     const response = NextResponse.json({
       playlistId: playlist.id,
@@ -110,6 +143,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: e.message }, { status: 401 });
     }
     if (e instanceof SpotifyApiError) {
+      if (e.status === 403) {
+        return NextResponse.json(
+          {
+            error:
+              "Forbidden no Spotify. (1) adicione seu e-mail em 'Users and Access' no Developer Dashboard, e (2) faca logout e login novamente neste app para reautorizar.",
+            spotifyMessage: e.message,
+          },
+          { status: 403 }
+        );
+      }
       return NextResponse.json({ error: e.message }, { status: e.status });
     }
     const msg = e instanceof Error ? e.message : "Erro desconhecido";
