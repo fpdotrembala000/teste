@@ -15,7 +15,20 @@ function getClient() {
   return new Anthropic({ apiKey });
 }
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-latest";
+// Default model. You can override it with ANTHROPIC_MODEL in .env.local.
+// We try the configured model first, then fall back to a list of well-known
+// model ids if the API returns 404 (e.g. account doesn't have access to that
+// specific snapshot). Cheapest+fastest option that works for this task is
+// Haiku — Sonnet is also great but more expensive.
+const PRIMARY_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+const FALLBACK_MODELS = [
+  "claude-haiku-4-5",
+  "claude-sonnet-4-5",
+  "claude-3-5-haiku-latest",
+  "claude-3-5-sonnet-latest",
+  "claude-3-5-sonnet-20241022",
+  "claude-3-5-haiku-20241022",
+];
 
 interface GenerateArgs {
   prompt: string;
@@ -103,27 +116,60 @@ function buildUserPrompt(args: GenerateArgs): string {
   return lines.join("\n");
 }
 
+// Build the ordered list of models we will try.
+function modelCandidates(): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const m of [PRIMARY_MODEL, ...FALLBACK_MODELS]) {
+    if (m && !seen.has(m)) {
+      seen.add(m);
+      out.push(m);
+    }
+  }
+  return out;
+}
+
 async function callModel(userPrompt: string): Promise<string> {
   const client = getClient();
-  try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      temperature: 0.85,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    const part = response.content.find((c) => c.type === "text");
-    if (!part || part.type !== "text") throw new AnthropicError("Resposta vazia da IA");
-    return part.text;
-  } catch (err: unknown) {
-    if (err instanceof AnthropicError) throw err;
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.toLowerCase().includes("api key") || msg.includes("401")) {
-      throw new AnthropicError("Chave da Anthropic inválida ou ausente.");
+  const candidates = modelCandidates();
+  let lastErr: unknown = null;
+  for (const model of candidates) {
+    try {
+      const response = await client.messages.create({
+        model,
+        max_tokens: 4096,
+        temperature: 0.85,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userPrompt }],
+      });
+      const part = response.content.find((c) => c.type === "text");
+      if (!part || part.type !== "text") throw new AnthropicError("Resposta vazia da IA");
+      return part.text;
+    } catch (err: unknown) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      // Auth errors: don't bother trying other models.
+      if (msg.toLowerCase().includes("api key") || msg.includes("401")) {
+        throw new AnthropicError("Chave da Anthropic inválida ou ausente.");
+      }
+      // Model not found / not available for this account: try next one.
+      const isModelNotFound =
+        msg.includes("404") ||
+        msg.toLowerCase().includes("not_found") ||
+        msg.toLowerCase().includes("model:");
+      if (isModelNotFound) {
+        // eslint-disable-next-line no-console
+        console.warn(`[anthropic] modelo "${model}" indisponível, tentando próximo...`);
+        continue;
+      }
+      // Other errors: surface immediately.
+      throw new AnthropicError(`Erro ao chamar Anthropic: ${msg}`);
     }
-    throw new AnthropicError(`Erro ao chamar Anthropic: ${msg}`);
   }
+  const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+  throw new AnthropicError(
+    `Nenhum modelo Anthropic disponível na sua conta. Configure ANTHROPIC_MODEL em .env.local. Último erro: ${msg}`
+  );
 }
 
 // Generate a playlist via the AI. Will retry with a stricter instruction once

@@ -67,6 +67,10 @@ Abra `.env.local` e preencha:
 
 ```env
 ANTHROPIC_API_KEY=sua_chave_da_anthropic
+# Opcional - default: claude-haiku-4-5 (com fallback automatico).
+# Outros validos: claude-sonnet-4-5, claude-opus-4-7, claude-3-5-haiku-latest.
+ANTHROPIC_MODEL=claude-haiku-4-5
+
 SPOTIFY_CLIENT_ID=seu_client_id
 SPOTIFY_CLIENT_SECRET=seu_client_secret
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/api/auth/spotify/callback
@@ -181,6 +185,7 @@ src/
 | Login redireciona com `error=invalid_state` | Cookies bloqueados | Use 127.0.0.1 e o mesmo navegador (sem modo anônimo) |
 | `User not registered in the developer dashboard` | App em Development Mode | Adicione seu e-mail em **Users and Access** no Spotify Dashboard |
 | `ANTHROPIC_API_KEY não configurada` | `.env.local` ausente ou servidor não foi reiniciado | Reinicie `npm run dev` após editar `.env.local` |
+| `404 not_found_error model: ...` | O modelo configurado não está liberado para sua conta | Defina `ANTHROPIC_MODEL=claude-haiku-4-5` no `.env.local` (o app já tem fallback automático) |
 | `Sessão expirada, faça login novamente` | Refresh token revogado/ausente | Saia e entre novamente em **Entrar com Spotify** |
 | Muitas músicas não encontradas | IA usou nomes traduzidos/aproximados | Clique em **Gerar outra versão** ou ajuste o prompt |
 | Erro 403 ao ler playlist por inspiração | Playlist privada de outro usuário | Use playlists públicas |
