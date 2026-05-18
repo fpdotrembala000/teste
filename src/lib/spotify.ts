@@ -26,10 +26,12 @@ export class SpotifyAuthError extends Error {
 
 export class SpotifyApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  endpoint?: string;
+  constructor(message: string, status: number, endpoint?: string) {
     super(message);
     this.name = "SpotifyApiError";
     this.status = status;
+    this.endpoint = endpoint;
   }
 }
 
@@ -63,13 +65,16 @@ export async function exchangeCodeForTokens(code: string, redirectUri: string) {
     const text = await res.text();
     throw new SpotifyAuthError(`Falha ao trocar código por token: ${text}`);
   }
-  return (await res.json()) as {
+  const data = (await res.json()) as {
     access_token: string;
     refresh_token: string;
     expires_in: number;
     scope: string;
     token_type: string;
   };
+  // eslint-disable-next-line no-console
+  console.log("[spotify-auth] login ok, scopes concedidos:", data.scope);
+  return data;
 }
 
 export async function refreshAccessToken(refreshToken: string) {
@@ -134,6 +139,7 @@ export async function spotifyFetch<T>(
 ): Promise<T> {
   const accessToken = token || (await getValidAccessToken());
   const url = path.startsWith("http") ? path : `${SPOTIFY_API}${path}`;
+  const method = (init.method || "GET").toUpperCase();
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -155,7 +161,13 @@ export async function spotifyFetch<T>(
     const msg =
       (data as { error?: { message?: string } })?.error?.message ||
       (typeof data === "string" ? data : "Erro na API do Spotify");
-    throw new SpotifyApiError(msg, res.status);
+    // Detailed server-side log so the developer can see exactly what failed.
+    // eslint-disable-next-line no-console
+    console.error(
+      `[spotify-api] ${method} ${url} -> ${res.status} ${res.statusText}: ${msg}`,
+      typeof data === "object" ? data : ""
+    );
+    throw new SpotifyApiError(msg, res.status, `${method} ${path}`);
   }
   return data as T;
 }

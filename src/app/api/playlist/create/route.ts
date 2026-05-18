@@ -96,10 +96,11 @@ export async function POST(req: NextRequest) {
       if (e instanceof SpotifyApiError && e.status === 403) {
         return NextResponse.json(
           {
-            error:
-              "Forbidden ao criar a playlist. Causas mais comuns: (1) seu e-mail nao foi adicionado em 'Users and Access' no Spotify Developer Dashboard (apps em Development Mode aceitam ate 25 usuarios) ou (2) o token salvo nao tem as permissoes necessarias - faca logout e login novamente para reautorizar com os scopes corretos.",
+            error: `Forbidden ao criar playlist. Spotify disse: "${e.message}". Causas comuns: (1) seu e-mail nao foi adicionado em 'User Management' no Spotify Developer Dashboard, (2) o token nao tem o scope 'playlist-modify-private/public' (faca logout e login novamente).`,
             stage: "create_playlist",
+            endpoint: e.endpoint,
             spotifyMessage: e.message,
+            userId: user.id,
           },
           { status: 403 }
         );
@@ -113,11 +114,11 @@ export async function POST(req: NextRequest) {
       if (e instanceof SpotifyApiError && e.status === 403) {
         return NextResponse.json(
           {
-            error:
-              "A playlist foi criada, mas o Spotify recusou (403) ao adicionar as musicas. Verifique se seu e-mail esta em 'Users and Access' no Developer Dashboard e/ou faca logout e login novamente para reautorizar.",
+            error: `A playlist foi criada, mas o Spotify recusou (403) ao adicionar as musicas. Spotify disse: "${e.message}". Verifique 'User Management' no Dashboard e/ou faca logout/login.`,
             stage: "add_tracks",
             playlistId: playlist.id,
             playlistUrl: playlist.external_urls.spotify,
+            endpoint: e.endpoint,
             spotifyMessage: e.message,
           },
           { status: 403 }

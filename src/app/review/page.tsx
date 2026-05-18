@@ -136,7 +136,13 @@ export default function ReviewPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao criar playlist");
+      if (!res.ok) {
+        // Surface the full server message; it explains exactly what to do.
+        const fullMsg = data.error || `Erro ${res.status} ao criar playlist`;
+        // eslint-disable-next-line no-console
+        console.error("[create] erro do servidor:", data);
+        throw new Error(fullMsg);
+      }
       setResult(data);
       pushHistory({
         id: crypto.randomUUID(),
